@@ -1,11 +1,13 @@
-FROM node:slim AS builder
+FROM node:lts-alpine3.20 AS builder
 
 WORKDIR /wd
-COPY . /wd
-RUN npm i
-RUN npm run build
+COPY package*.json .
+RUN npm ci
+COPY . .
+RUN ls -lah && npm run build
+RUN npm prune --production
 
-FROM node:slim
+FROM node:lts-alpine3.20
 
 ARG version=unknown
 ARG release=unreleased
@@ -19,10 +21,11 @@ LABEL name="Happy moustaches" \
 
 WORKDIR /app
 
-COPY --from=builder /wd/build /app/build
-COPY --from=builder /wd/package.json /app/
-COPY --from=builder /wd/package-lock.json /app/
-RUN npm ci --omit dev
+COPY --from=builder /wd/build build/
+COPY --from=builder /wd/node_modules node_modules/
+COPY package.json .
+COPY package-lock.json .
 
+ENV NODE_ENV production
 ENV PORT 8080
 CMD ["node", "build"]

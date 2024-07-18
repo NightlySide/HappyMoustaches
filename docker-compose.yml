@@ -8,13 +8,16 @@ services:
       dockerfile: ../docker/backend.Dockerfile
     ports:
       - "3000:3000"
+    restart: unless-stopped
 
   frontend:
     image: happymoustache_frontend
     container_name: happymoustache_frontend
     hostname: frontend
+    user: "node"
     build:
       context: ./frontend
       dockerfile: ../docker/frontend.Dockerfile
     ports:
       - "8080:8080"
+    restart: unless-stopped
