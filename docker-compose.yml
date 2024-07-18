@@ -1,0 +1,20 @@
+services:
+  backend:
+    image: happymoustache_backend
+    container_name: happymoustache_backend
+    hostname: backend
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend.Dockerfile
+    ports:
+      - "3000:3000"
+
+  frontend:
+    image: happymoustache_frontend
+    container_name: happymoustache_frontend
+    hostname: frontend
+    build:
+      context: ./frontend
+      dockerfile: ../docker/frontend.Dockerfile
+    ports:
+      - "8080:8080"
