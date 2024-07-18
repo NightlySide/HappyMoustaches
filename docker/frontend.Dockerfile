@@ -2,6 +2,7 @@ FROM node:slim AS builder
 
 WORKDIR /wd
 COPY . /wd
+RUN npm i
 RUN npm run build
 
 FROM node:slim
