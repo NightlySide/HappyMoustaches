@@ -7,9 +7,12 @@ use user::Entity as User;
 
 use crate::error::BackendError;
 
+pub mod auth;
 pub mod user;
 
+#[derive(Debug, Clone)]
 pub struct DB {
+    pub path: String,
     pub conn: DatabaseConnection,
 }
 
@@ -37,7 +40,10 @@ impl DB {
         let db = Database::connect(opt).await?;
         info!("Connected to the db");
 
-        Ok(Self { conn: db })
+        Ok(Self {
+            conn: db,
+            path: path.to_owned(),
+        })
     }
 
     pub async fn create_tables(&self) -> Result<(), BackendError> {

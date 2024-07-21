@@ -1,32 +1,25 @@
-use axum::{routing::get, Router};
-use db::DB;
+use app::App;
 use error::BackendError;
-use tracing::info;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
+mod app;
 mod db;
 mod error;
+mod routes;
 
 #[tokio::main]
 async fn main() -> Result<(), BackendError> {
     // initialize tracing
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::registry()
+        .with(EnvFilter::new(std::env::var("RUST_LOG").unwrap_or_else(
+            |_| {
+                "backend=debug,axum_login=debug,tower_sessions=debug,sqlx=warn,tower_http=debug"
+                    .into()
+            },
+        )))
+        .with(tracing_subscriber::fmt::layer())
+        .try_init()?;
 
-    let db = DB::new("db.sqlite").await?;
-    db.create_tables().await?;
-
-    // build our application with a route
-    let app = Router::new()
-        // `GET /` goes to `root`
-        .route("/", get(root));
-    // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    info!("Listening on 0.0.0.0:3000");
-    axum::serve(listener, app).await.unwrap();
-
+    App::new().await?.serve().await?;
     Ok(())
-}
-
-// basic handler that responds with a static string
-async fn root() -> &'static str {
-    "Hello, World!"
 }
