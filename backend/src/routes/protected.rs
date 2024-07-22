@@ -1,7 +1,7 @@
-use crate::db::auth::AuthSession;
+use crate::{app::App, db::auth::AuthSession};
 use axum::{http::StatusCode, response::IntoResponse, routing::get, Router};
 
-pub fn router() -> Router<()> {
+pub fn router() -> Router<App> {
     Router::new().route("/", get(protected))
 }
 

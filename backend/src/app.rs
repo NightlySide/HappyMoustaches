@@ -15,8 +15,9 @@ use crate::{
     routes,
 };
 
+#[derive(Clone, Debug)]
 pub struct App {
-    db: DB,
+    pub db: DB,
 }
 
 impl App {
@@ -59,9 +60,10 @@ impl App {
         let auth_layer = AuthManagerLayerBuilder::new(backend, session_layer).build();
 
         let app = routes::protected::router()
-            .route_layer(login_required!(AuthBackend, login_url = "/login"))
+            .route_layer(login_required!(AuthBackend))
             .merge(routes::auth::router())
-            .layer(auth_layer);
+            .layer(auth_layer)
+            .with_state(self.clone());
 
         // run our app with hyper, listening globally on port 3000
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

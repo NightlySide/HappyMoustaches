@@ -1,70 +1,102 @@
+use std::error::Error;
+
 use axum::{
+    extract::State,
     http::StatusCode,
     response::{IntoResponse, Redirect},
     routing::{get, post},
     Json, Router,
 };
-use tracing::{debug, info, warn};
+use sea_orm::{ActiveModelTrait, ActiveValue};
+use tracing::{error, info, warn};
 
-use crate::db::auth::{AuthSession, Credentials};
+use crate::{
+    app::App,
+    db::auth::{AuthSession, Credentials},
+    db::user,
+    error::BackendError,
+};
 
-pub fn router() -> Router<()> {
+pub fn router() -> Router<App> {
     Router::new()
         .route("/login", post(post_login))
         .route("/logout", get(get_logout))
-        .route("/register", get(post_register))
+        .route("/register", post(post_register))
 }
 
 pub async fn post_login(
     mut auth_session: AuthSession,
     Json(creds): Json<Credentials>,
 ) -> impl IntoResponse {
-    debug!("Trying creds: {}|{}", creds.email, creds.password);
-
+    // Trying to auth the user
     let user = match auth_session.authenticate(creds.clone()).await {
         Ok(Some(user)) => user,
         Ok(None) => {
             // invalid credentials
-            let mut login_url = "/login".to_string();
-            if let Some(next) = creds.next {
-                login_url = format!("{}?next={}", login_url, next);
-            };
-            warn!("invalid credentials");
-
-            return Redirect::to(&login_url).into_response();
+            warn!("post_login: invalid credentials");
+            return StatusCode::UNAUTHORIZED.into_response();
         }
-        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        Err(err) => {
+            // we already know this is of type BackendError so let's downcast it!
+            let backend_error = err
+                .source()
+                .unwrap()
+                .downcast_ref::<BackendError>()
+                .unwrap();
+
+            match backend_error {
+                &BackendError::NoUser => {
+                    return (StatusCode::UNAUTHORIZED, "User not found").into_response();
+                }
+                _ => {
+                    error!("post_login: {}", backend_error);
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+            }
+        }
     };
 
     if auth_session.login(&user).await.is_err() {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    info!("Successfully logged in as {}", user.email);
-
-    if let Some(ref next) = creds.next {
-        Redirect::to(next)
-    } else {
-        Redirect::to("/")
-    }
-    .into_response()
+    info!("post_login: Successfully logged in as {}", user.email);
+    StatusCode::OK.into_response()
 }
 
 pub async fn post_register(
-    mut _auth_session: AuthSession,
+    State(app): State<App>,
     Json(creds): Json<Credentials>,
 ) -> impl IntoResponse {
     // check if user does not already exist
+    match app.db.get_user_by_email(&creds.email).await {
+        Ok(Some(_)) => {
+            return (StatusCode::CONFLICT, "User already exists").into_response();
+        }
+        Ok(None) => (),
+        Err(err) => {
+            error!("post_register: {}", err);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    }
 
     // create the user
-    info!("Successfully logged in as");
-
-    if let Some(ref next) = creds.next {
-        Redirect::to(next)
-    } else {
-        Redirect::to("/")
+    let hashed_password = password_auth::generate_hash(creds.password);
+    let user = user::ActiveModel {
+        id: ActiveValue::NotSet,
+        email: ActiveValue::Set(creds.email),
+        password: ActiveValue::Set(hashed_password),
+    };
+    match user.insert(&app.db.conn).await {
+        Err(err) => {
+            error!("post_register: cannot create user: {err}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+        Ok(user) => {
+            info!("post_register: user {} ({}) created", user.id, user.email);
+            StatusCode::OK.into_response()
+        }
     }
-    .into_response()
 }
 
 pub async fn get_logout(mut auth_session: AuthSession) -> impl IntoResponse {

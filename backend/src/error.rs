@@ -16,4 +16,7 @@ pub enum BackendError {
 
     #[error("Std io error: {0}")]
     StdIoErr(#[from] std::io::Error),
+
+    #[error("No user found")]
+    NoUser,
 }

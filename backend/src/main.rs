@@ -1,5 +1,6 @@
 use app::App;
 use error::BackendError;
+use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 mod app;
@@ -13,13 +14,18 @@ async fn main() -> Result<(), BackendError> {
     tracing_subscriber::registry()
         .with(EnvFilter::new(std::env::var("RUST_LOG").unwrap_or_else(
             |_| {
-                "backend=debug,axum_login=debug,tower_sessions=debug,sqlx=warn,tower_http=debug"
-                    .into()
+                "backend=debug,axum_login=warn,tower_sessions=warn,sqlx=warn,tower_http=warn".into()
             },
         )))
         .with(tracing_subscriber::fmt::layer())
         .try_init()?;
 
-    App::new().await?.serve().await?;
+    if let Err(err) = App::new().await?.serve().await {
+        if let BackendError::TaskJoin(_) = err {
+        } else {
+            error!("error while stopping task: {}", err);
+        }
+    }
+    info!("Server shut down");
     Ok(())
 }

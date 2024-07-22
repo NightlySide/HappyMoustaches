@@ -33,7 +33,6 @@ impl AuthUser for UserModel {
 pub struct Credentials {
     pub email: String,
     pub password: String,
-    pub next: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -62,11 +61,17 @@ impl AuthnBackend for AuthBackend {
             .one(&self.db.conn)
             .await?;
 
+        // if the user is not found, return an error
+        if user.is_none() {
+            return Err(BackendError::NoUser);
+        }
+
         // Verifying the password is blocking and potentially slow, so we'll do so via
         // `spawn_blocking`.
         tokio::task::spawn_blocking(|| {
             // We're using password-based authentication--this works by comparing our form
             // input with an argon2 password hash.
+            // will return None is credentials don't match, else it will return the user
             Ok(user.filter(|user| {
                 password_auth::verify_password(creds.password, &user.password).is_ok()
             }))

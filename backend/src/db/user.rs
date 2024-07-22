@@ -1,6 +1,10 @@
 use sea_orm::entity::prelude::*;
 use sea_orm::EntityTrait;
 
+use crate::error::BackendError;
+
+use super::DB;
+
 #[derive(Clone, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "users")]
 pub struct Model {
@@ -26,3 +30,13 @@ impl std::fmt::Debug for Model {
 pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl DB {
+    pub async fn get_user_by_email(&self, email: &str) -> Result<Option<Model>, BackendError> {
+        self::Entity::find()
+            .filter(self::Column::Email.eq(email))
+            .one(&self.conn)
+            .await
+            .map_err(BackendError::DbErr)
+    }
+}
