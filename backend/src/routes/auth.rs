@@ -101,7 +101,7 @@ pub async fn post_register(
 
 pub async fn get_logout(mut auth_session: AuthSession) -> impl IntoResponse {
     match auth_session.logout().await {
-        Ok(_) => Redirect::to("/login").into_response(),
+        Ok(_) => StatusCode::OK.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
