@@ -3,7 +3,7 @@ use std::error::Error;
 use axum::{
     extract::State,
     http::StatusCode,
-    response::{IntoResponse, Redirect},
+    response::IntoResponse,
     routing::{get, post},
     Json, Router,
 };
