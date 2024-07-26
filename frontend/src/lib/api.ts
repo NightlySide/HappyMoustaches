@@ -5,6 +5,7 @@ const API_HOST = "localhost:3000";
 export const API_URL = `http://${API_HOST}`;
 
 export interface LoggedUser {
+    id: number;
     email: string;
 };
 
@@ -57,6 +58,49 @@ const initAPIStore = () => {
             }
         },
 
+        logout: async (custom_fetch?: any) => {
+            const fetchfunc = custom_fetch ? custom_fetch : fetch;
+            update((state) => ({ ...state, loading: true }));
+
+            try {
+                const res = await fetchfunc("/logout", {
+                    method: "GET",
+                    cache: "no-cache"
+                });
+
+                return res.status == 200;
+            } catch (error: any) {
+                console.error("Error while logout:", error);
+                set({ user: null, token: null, error: error, loading: false });
+            }
+        },
+
+        get_user: async (token?: string, custom_fetch?: any) => {
+            const fetchfunc = custom_fetch ? custom_fetch : fetch;
+            update((state) => ({ ...state, loading: true }));
+
+            // make the request
+            try {
+                const res = await fetchfunc("/api/user", {
+                    method: "GET",
+                    headers: [["Accept", "application/json"], ["cookie", token ? token : document.cookie]],
+                });
+                const user = await res.json();
+
+                // check that the user is authorized
+                if (res.status != 200) {
+                    update((state) => ({ ...state, user: null, error: "Unauthorized", loading: false }));
+                }
+
+                // update the user
+                update((state) => ({ ...state, user: user, error: "", loading: false }));
+
+                return user;
+            } catch (error: any) {
+                console.error("Error while fetching user info:", error);
+                update((state) => ({ ...state, user: null, error: error, loading: false }));
+            }
+        }
     }
 }
 
