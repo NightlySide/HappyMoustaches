@@ -1,3 +1,7 @@
+use axum::http::{
+    header::{CONTENT_TYPE, COOKIE},
+    HeaderValue, Method,
+};
 use axum_login::{
     login_required,
     tower_sessions::{ExpiredDeletion, Expiry, SessionManagerLayer},
@@ -5,7 +9,8 @@ use axum_login::{
 };
 use time::Duration;
 use tokio::{signal, task::AbortHandle};
-use tower_sessions::cookie::Key;
+use tower_http::cors::CorsLayer;
+use tower_sessions::cookie::{Key, SameSite};
 use tower_sessions_sqlx_store::{sqlx::SqlitePool, SqliteStore};
 use tracing::info;
 
@@ -49,6 +54,8 @@ impl App {
 
         let session_layer = SessionManagerLayer::new(session_store)
             .with_secure(false)
+            .with_same_site(SameSite::Lax)
+            .with_http_only(false)
             .with_expiry(Expiry::OnInactivity(Duration::days(1)))
             .with_signed(key);
 
@@ -57,12 +64,23 @@ impl App {
         // This combines the session layer with our backend to establish the auth
         // service which will provide the auth session as a request extension.
         let backend = AuthBackend::new(self.db.clone());
-        let auth_layer = AuthManagerLayerBuilder::new(backend, session_layer).build();
+        let auth_layer = AuthManagerLayerBuilder::new(backend, session_layer)
+            .with_data_key("auth_data")
+            .build();
 
         let app = routes::protected::router()
             .route_layer(login_required!(AuthBackend))
             .merge(routes::auth::router())
             .layer(auth_layer)
+            .layer(
+                CorsLayer::new()
+                    .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+                    // .allow_origin(Any)
+                    .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap())
+                    .allow_credentials(true)
+                    .allow_headers([CONTENT_TYPE, COOKIE])
+                    .allow_private_network(true),
+            )
             .with_state(self.clone());
 
         // run our app with hyper, listening globally on port 3000
