@@ -86,6 +86,9 @@ pub async fn post_register(
         id: ActiveValue::NotSet,
         email: ActiveValue::Set(creds.email),
         password: ActiveValue::Set(hashed_password),
+        phone_number: ActiveValue::Set("".to_string()),
+        address: ActiveValue::Set("".to_string()),
+        role: ActiveValue::Set(user::UserRole::HostFamily),
     };
     match user.insert(&app.db.conn).await {
         Err(err) => {

@@ -1,8 +1,6 @@
 import { API_URL, type LoggedUser } from "$lib/api";
 
 export const GET = async ({ request, fetch }) => {
-    console.log(request.headers.get("cookie"));
-
     const res = await fetch(API_URL + "/user", {
         method: "GET",
         headers: [["Accept", "application/json"], ["cookie", request.headers.get("cookie")!]],

@@ -13,7 +13,6 @@ export async function POST({ request, fetch }) {
         credentials: "include",
         cache: "no-cache"
     });
-    console.log(res.headers);
 
     const cookies = res.headers.getSetCookie();
 

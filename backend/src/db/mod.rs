@@ -1,14 +1,24 @@
+use medication::Entity as Medication;
+use pet::Entity as Pet;
+use pet_weight::Entity as PetWeight;
 use sea_orm::{ConnectOptions, Database};
 use sea_orm::{ConnectionTrait, DatabaseConnection, Schema};
 use std::time::Duration;
 use std::{fs::File, path::Path};
 use tracing::{debug, info};
 use user::Entity as User;
+use vet::Entity as Vet;
+use vet_visit::Entity as VetVisit;
 
 use crate::error::BackendError;
 
 pub mod auth;
+pub mod medication;
+pub mod pet;
+pub mod pet_weight;
 pub mod user;
+pub mod vet;
+pub mod vet_visit;
 
 #[derive(Debug, Clone)]
 pub struct DB {
@@ -47,13 +57,25 @@ impl DB {
     }
 
     pub async fn create_tables(&self) -> Result<(), BackendError> {
+        self.create_table(User).await?;
+        self.create_table(Pet).await?;
+        self.create_table(PetWeight).await?;
+        self.create_table(Medication).await?;
+        self.create_table(Vet).await?;
+        self.create_table(VetVisit).await?;
+        Ok(())
+    }
+
+    async fn create_table(
+        &self,
+        entity: impl sea_orm::entity::EntityTrait,
+    ) -> Result<(), BackendError> {
         let builder = self.conn.get_database_backend();
         let schema = Schema::new(builder);
 
-        // if the table does not exist, create it
         match self
             .conn
-            .execute(builder.build(&schema.create_table_from_entity(User)))
+            .execute(builder.build(&schema.create_table_from_entity(entity)))
             .await
         {
             Ok(_) => Ok(()),
@@ -65,6 +87,7 @@ impl DB {
                 Err(err)
             }
         }?;
+
         Ok(())
     }
 }
