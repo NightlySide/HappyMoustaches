@@ -5,7 +5,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   const isLoggedIn = event.cookies.get("id") != undefined;
 
   // If the user is not logged in and the requested path is not the login page, redirect to the login page
-  if (!isLoggedIn && !event.url.pathname.startsWith('/login')) {
+  if (!isLoggedIn && !event.url.pathname.startsWith('/login') && event.url.pathname != "/") {
     return new Response(null, {
       status: 302,
       headers: {
@@ -18,7 +18,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     return new Response(null, {
       status: 301,
       headers: {
-        location: '/',
+        location: '/dashboard',
       },
     });
   }

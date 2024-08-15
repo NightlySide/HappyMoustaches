@@ -35,7 +35,7 @@
 			return;
 		}
 
-		goto("/");
+		goto("/dashboard");
 	};
 </script>
 

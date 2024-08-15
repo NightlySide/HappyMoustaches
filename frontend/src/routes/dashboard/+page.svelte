@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { AppBar } from "@skeletonlabs/skeleton";
-	// import { api } from "$lib/api";
-	// import type { LoggedUser } from "$lib/api";
+	import type { LoggedUser } from "$lib/api";
 
-	// export let data;
-	// const user: LoggedUser = data.user;
+	export let data;
+	const user: LoggedUser = data.user;
 </script>
 
 <AppBar>
@@ -19,5 +18,6 @@
 </AppBar>
 
 <div class="px-4 py-4">
-	<h1>Hello world!</h1>
+	<h1>Title</h1>
+	<p>Email: {user.email}</p>
 </div>

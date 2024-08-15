@@ -6,6 +6,7 @@ pub fn router() -> Router<App> {
     Router::new()
         .route("/", get(protected))
         .route("/user", get(get_user))
+        .merge(super::pet::router())
 }
 
 #[derive(Serialize)]

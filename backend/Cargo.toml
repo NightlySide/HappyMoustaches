@@ -7,6 +7,8 @@ edition = "2021"
 axum = "0.7.5"
 axum-login = "0.15.3"
 axum-messages = "0.6.1"
+axum_thiserror = "0.1.0"
+chrono = "0.4.38"
 password-auth = "1.0.0"
 sea-orm = { version = "0.12.15", features = [
     "macros",
